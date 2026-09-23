@@ -38,3 +38,6 @@ xsim.dir/
 .DS_Store
 .vscode/
 *.swp
+
+# Local Vivado project folders
+importedprojs/
