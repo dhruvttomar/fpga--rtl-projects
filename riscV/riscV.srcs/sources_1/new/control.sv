@@ -24,12 +24,12 @@ module control (
     input  logic [6:0] opcode,
     input  logic [2:0] funct3,
     input  logic [6:0] funct7,
-    output logic       reg_write,
-    output logic       mem_write,
-    output logic       alu_src,
-    output logic       result_src,
-    output logic       branch,
-    output logic       jump,
+    output logic reg_write,
+    output logic mem_write,
+    output logic alu_src,
+    output logic [1:0] result_src,
+    output logic branch,
+    output logic jump,
     output logic [3:0] alu_ctrl
     );
     
@@ -56,6 +56,7 @@ module control (
         branch = 0;
         jump = 0;
         alu_ctrl = ADD; 
+        result_src = 0; 
         case(opcode)
             rtype: begin
                 reg_write = 1;
@@ -63,6 +64,7 @@ module control (
                 branch = 0; 
                 jump = 0; 
                 alu_src = 0; 
+                result_src = 2'b00; 
                 case(funct3)
                     3'b000: begin
                         if (funct7[5] == 1'b1) alu_ctrl = SUB;
@@ -81,6 +83,7 @@ module control (
                 branch = 0; 
                 jump = 0; 
                 alu_src = 1; 
+                result_src = 2'b00;
                 case(funct3)
                     3'b000: alu_ctrl = ADD;
                     3'b010: alu_ctrl = SLT;
@@ -94,7 +97,7 @@ module control (
                 reg_write = 1; 
                 mem_write = 0; 
                 alu_src = 1;
-                result_src = 1; 
+                result_src = 2'b01; 
                 branch = 0;
                 jump = 0; 
                 alu_ctrl = ADD; 
@@ -118,7 +121,7 @@ module control (
                 reg_write = 1; 
                 mem_write = 0; 
                 alu_src = 1;
-                result_src = 0; 
+                result_src = 2'b11; 
                 branch = 0;
                 jump = 0; 
                 alu_ctrl = ADD;
@@ -127,6 +130,7 @@ module control (
                 reg_write = 1'b1; 
                 jump = 1'b1;
                 mem_write = 0;
+                result_src = 2'b10;
             end
             default: begin
                 reg_write = 0;
