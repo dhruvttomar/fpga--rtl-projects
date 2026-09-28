@@ -31,19 +31,27 @@ module riscv_core(
     logic [31:0] pc, pc_next, instruction, imm;
     logic [31:0] rs1_data, rs2_data, alu_result, mem_read_data, writeback_data;
     logic [31:0] alu_b;
-    logic reg_write, mem_write, alu_src, result_src, branch, jump, zero;
+    logic reg_write, mem_write, alu_src, branch, jump, zero;
     logic [3:0]  alu_ctrl;
     logic [31:0] debug_reg;
     logic uart_sel;
     logic dmem_write;
     logic uart_write;
     logic lt, ltu; 
+    logic [1:0] result_src; 
+    logic [31:0] alu_a;
+    logic br_eq, br_lt, br_ltu; 
     
     assign alu_b = alu_src ? imm : rs2_data;
-    assign writeback_data = result_src ? mem_read_data : alu_result;
-    assign uart_sel   = alu_result[12];
+    assign writeback_data = (result_src == 2'b01) ? mem_read_data :
+                            (result_src == 2'b10) ? (pc + 32'd4)  :
+                            (result_src == 2'b11) ? (imm) : 
+                             alu_result;    assign uart_sel   = alu_result[12];
     assign dmem_write = mem_write & ~uart_sel;
     assign uart_write = mem_write &  uart_sel; 
+    assign br_eq  = (rs1_data == rs2_data);
+    assign br_lt  = ($signed(rs1_data) < $signed(rs2_data));
+    assign br_ltu = (rs1_data < rs2_data);
         
     uart_tx uart(
         .clk(clk),
@@ -118,13 +126,13 @@ module riscv_core(
     
     next_pc nextpc (
         .funct3(instruction[14:12]),
-        .lt(lt),
-        .ltu(ltu),
+        .lt(br_lt),
+        .ltu(br_ltu),
         .pc(pc),
         .imm(imm),
         .branch(branch),
         .jump(jump),
-        .zero(zero),
+        .zero(br_eq),
         .pc_next(pc_next)
     );
 endmodule
