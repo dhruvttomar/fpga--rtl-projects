@@ -40,4 +40,7 @@ xsim.dir/
 *.swp
 
 # Local Vivado project folders
+# (projects reference the sources in the NN-* folders; leftover per-project
+#  .srcs copies are local only)
 importedprojs/
+*.srcs/
