@@ -35,25 +35,25 @@ module order_book (
     output logic ask_valid
 );
 
+    //orderbook
     logic [63:0] oref [0:1023];
     logic [7:0] oside [0:1023];
     logic [31:0] oshares [0:1023];
     logic [31:0] oprice [0:1023];
-    logic ovalid [0:1023];
+    logic ovalid [0:1023]; //live order? 
     
-    logic [63:0] rd_ref;          
-    logic rd_valid;        
-    logic pending_delete;  
-    logic pending_cancel; 
-    logic [63:0] del_ref; 
-    logic [31:0] rd_shares;
-    logic [31:0] cxl_shares;  
+    logic [63:0] rd_ref;   //from slot
+    logic [31:0] rd_shares; 
+    logic rd_valid;      
+    logic pending_delete;  //from message
+    logic [63:0] del_ref;  
+    logic pending_cancel;  
+    logic [31:0] cxl_shares; 
     logic [63:0] best_bid_ref; 
     logic [63:0] best_ask_ref; 
 
-    
-    logic bid_scan; 
-    logic [12:0] scan_addr; 
+    logic bid_scan; //scanning?
+    logic [12:0] scan_addr; //current
     logic [31:0] scan_best; 
     logic [63:0] scan_best_ref;
     logic scan_found; 
@@ -70,15 +70,15 @@ module order_book (
 
     always_comb begin
         if (pending_cancel) begin
-            sh_we   = (del_ref == rd_ref) && rd_valid;
+            sh_we = (del_ref == rd_ref) && rd_valid; //same order & live order?
             sh_addr = del_ref[9:0];
             sh_data = rd_shares - cxl_shares;
         end else begin
-            sh_we   = msg_done && (msg_type == 8'h41);
+            sh_we = msg_done && (msg_type == 8'h41);
             sh_addr = order_ref[9:0];
             sh_data = shares;
         end
-    end
+    endg
     always_ff @(posedge clk) begin 
         pending_delete <= 1'b0; 
         pending_cancel <= 1'b0; 
@@ -91,8 +91,8 @@ module order_book (
         end else begin 
             if (sh_we) oshares[sh_addr] <= sh_data;
             if (pending_delete) begin 
-                if (del_ref == rd_ref && rd_valid) begin
-                    ovalid[del_ref[9:0]] <= 1'b0;
+                if (del_ref == rd_ref && rd_valid) begin //same order & live order?
+                    ovalid[del_ref[9:0]] <= 1'b0; //delete
                     if (del_ref == best_bid_ref) begin
                         bid_scan <= 1'b1;
                         scan_addr <= 13'd0; 
@@ -159,19 +159,19 @@ module order_book (
                 end
             end
             if (msg_done) begin 
-                if (msg_type == 8'h41) begin 
+                if (msg_type == 8'h41) begin //Add
                     oref[order_ref[9:0]] <= order_ref[63:0];
                     oside[order_ref[9:0]] <= side[7:0];
                     oprice[order_ref[9:0]] <= price[31:0];
                     ovalid[order_ref[9:0]] <= 1'b1; 
-                    if (side == 8'h42) begin
+                    if (side == 8'h42) begin //Buy
                         if (!bid_valid || price > best_bid) begin
                             best_bid <= price;
                             best_bid_ref <= order_ref; 
                             bid_valid <= 1;  
                         end    
                     end 
-                    if (side == 8'h53) begin
+                    if (side == 8'h53) begin //Sell
                         if (!ask_valid || price < best_ask) begin
                             best_ask <= price;
                             best_ask_ref <= order_ref; 
@@ -179,13 +179,13 @@ module order_book (
                         end  
                     end
                 end
-                else if (msg_type == 8'h44) begin
+                else if (msg_type == 8'h44) begin // Delete
                     rd_ref <= oref[order_ref[9:0]];
                     rd_valid <= ovalid[order_ref[9:0]];
                     pending_delete <= 1'b1;
                     del_ref <= order_ref;
                 end
-                else if (msg_type == 8'h58 || msg_type == 8'h45) begin
+                else if (msg_type == 8'h58 || msg_type == 8'h45) begin // Cancel/Execute
                     rd_ref <= oref[order_ref[9:0]];
                     rd_valid <= ovalid[order_ref[9:0]];
                     pending_cancel <= 1'b1;
